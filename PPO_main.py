@@ -27,9 +27,9 @@ print('Number of agents:', num_agents)
 
 n_actions = brain.vector_action_space_size
 n_inputs = states.shape[1]
-
-plot = Plot_Scores()
 config = ConfigPPO()
+plot = Plot_Scores(fn='PPO_trial_', text=config.__dict__)
+
 model = ActorCritic(n_inputs, n_actions,config).to(config.device)
 agent = PPOAgent(model=model, env=env, env_info=env_info, brain=brain_name,num_agents=num_agents, config=config)
 print(model)
@@ -37,5 +37,5 @@ print(model)
 finished_episodes = 0
 for step in range(config.max_steps):
     scores_hist = agent.step()
-    plot.plot(scores_hist, config.__dict__)
+    plot.plot(scores_hist)
 

@@ -1,7 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
+import os
 import sys
+
 
 def print_rewards(rewards, ave_len=100):
     if(len(rewards)>1):
@@ -18,24 +20,33 @@ def print_rewards(rewards, ave_len=100):
 
 
 class Plot_Scores:
-    def __init__(self):
+    def __init__(self,fn,text):
         matplotlib.use('tkagg')  # needed to run on AWS wiht X11 forwarding
+        cwd = os.getcwd()
+        serial = 0
+        self.fn = cwd + os.sep + fn + str(serial)+'.jpg'
+        while os._exists(self.fn):
+            serial+=1
+            self.fn = cwd + os.sep + fn + str(serial) + '.jpg'
+
         self.line, = plt.plot(np.array(0), np.array(0))
         self.axes = plt.gca()
-
+        text = str(text)
+        self.axes.text(0,1, text.replace(',', '\n'),size='smaller',horizontalalignment='left',
+        verticalalignment='top', transform=self.axes.transAxes)
         plt.ion()
         plt.xlabel = 'Episode'
         plt.ylabel = 'Mean score'
 
 
-    def plot(self, scores_hist,text):
-        if len(scores_hist) > 2:
+    def plot(self, scores_hist):
+        if len(scores_hist) > 0:
             self.line.set_xdata(np.arange(0, len(scores_hist)))
             self.line.set_ydata(scores_hist)
             self.axes.set_xlim(max(0, len(scores_hist) - 2000), len(scores_hist))
             self.axes.set_ylim(np.min(scores_hist) * 1.05, np.max(scores_hist) * 1.05)
-            self.axes.text(0.5,1,'text')
             plt.draw()
+            plt.savefig(self.fn)
             plt.pause(.1)
 
 class Logger(object):

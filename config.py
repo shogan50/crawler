@@ -2,12 +2,12 @@ import torch
 class ConfigPPO():
     def __init__(self):
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        self.epochs = 8
+        self.epochs = 1
         self.gamma = .95
         self.gradient_clip = .2
-        self.max_steps = int(1e5)
+        self.max_steps = int(2000)
         self.mini_batch_size = 32
-        self.lr = 1e-3
+        self.lr = 5e-4
         self.lr_decay = .995
         self.ppo_ratio_clip = .5
         self.beta = .01
