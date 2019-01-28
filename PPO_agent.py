@@ -36,6 +36,7 @@ class PPOAgent():
         # states_tensor = self.tensor(self.env_info.vector_observations)
         # Gather training data
         for i in range(config.rollout_len):
+            assert not np.isnan(np.sum(self.state)), 'nan encountered'
             state = self.tensor(self.state)
             # print(state.shape)
             action, log_p, _, value = self.model(state)
