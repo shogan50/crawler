@@ -42,6 +42,7 @@ class PPOAgent():
             log_p = log_p.detach().cpu().numpy()
             value = value.detach().squeeze(1).cpu().numpy()
             action = action.detach().cpu().numpy()
+            assert not np.isnan(np.sum(action)), 'nan encountered'
             next_state, reward, done = self.env_step(action)
             self.online_rewards += reward
 

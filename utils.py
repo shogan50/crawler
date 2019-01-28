@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
 import os
+from os import path
 import sys
 
 
@@ -25,7 +26,7 @@ class Plot_Scores:
         cwd = os.getcwd()
         serial = 0
         self.fn = cwd + os.sep + fn + str(serial)+'.jpg'
-        while os._exists(self.fn):
+        while os.path.exists(self.fn):
             serial+=1
             self.fn = cwd + os.sep + fn + str(serial) + '.jpg'
 
