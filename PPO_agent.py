@@ -1,55 +1,41 @@
+#adapted from https://github.com/rgilman33/baselines-A2C
+
 import torch.nn.functional as F
 import torch.nn as nn
 import torch
-import torch.autograd as Variable
-import torch.optim as optim
-import random
-import copy
-from utils import *
-
 
 import numpy as np
 #
 class PPOAgent():
-    def __init__(self, model, env, env_info, brain, num_agents, device):
+    def __init__(self, model, env, env_info, brain, num_agents, config):
+        self.config = config
         self.num_agents = num_agents
-        self.rollout_len = 256
-        self.mini_batch_size = 32
-        self.epochs = int(self.rollout_len//self.mini_batch_size)
-        self.ppo_ratio_clip =.2
-        self.entropy_weight = 0.01
-        self.gradient_clip = .5
         self.model = model
         self.env = env
         self.brain_name = brain
         self.env_info = env_info
         self.episode_rewards = []
         self.online_rewards = np.zeros(num_agents)
-        self.GAMMA = .99
-        self.TAU = .95
-        self.use_gae = True
         self.total_steps = 0
-        self.device = device
+        self.device = config.device
         self.debug_messages = True
         self.last_len_rewards = 0
         self.state = self.env_reset()
         self.steps = 0
         self.step_rewards = []
-        self.lr_decay = 0.995
-        self.lr = 2e-4
 
     def step(self):
-
+        config = self.config
         self.steps +=1
 
-        self.model.update_lr(self.lr_decay**self.steps*self.lr)
+        self.model.update_lr(config.lr_decay**self.steps*config.lr)
         # print('lr',self.lr_decay**self.steps*self.lr)
 
         trajectory_raw = []
 
         # states_tensor = self.tensor(self.env_info.vector_observations)
         # Gather training data
-        for i in range(self.rollout_len):
+        for i in range(config.rollout_len):
             state = self.tensor(self.state)
             # print(state.shape)
             action, log_p, _, value = self.model(state)
@@ -70,7 +56,7 @@ class PPOAgent():
         trajectory_raw.append((next_state, action, reward, log_p, value, 1-done))
         trajectory = [None] * (len(trajectory_raw)-1)
 
-        advantages = torch.zeros(self.num_agents,1).to(self.device)
+        advantages = torch.zeros(self.num_agents,1).to(config.device)
         R =  next_value
 
         for i in reversed(range(len(trajectory_raw)-1)):
@@ -80,21 +66,21 @@ class PPOAgent():
                 lambda x: torch.tensor(x).float().to(self.device),
                 (actions, rewards, not_dones, values, trajectory_raw[i+1][-2], log_probs))
 
-            R = rewards + self.GAMMA * R * not_dones
+            R = rewards + config.gamma * R * not_dones
             # print('R size:', R.size())
-            if not self.use_gae:
+            if not config.use_gae:
                 # print('R, values size', R.size(), values_traj[i].detach().size())
                 advantages = R[:,None] - values[:,None]
             else:
-                td_errors = rewards + self.GAMMA * not_dones * next_values - values
-                advantages = advantages * self.TAU * self.GAMMA * not_dones[:,None] + td_errors[:,None]
+                td_errors = rewards + config.gamma * not_dones * next_values - values
+                advantages = advantages * config.tau * config.gamma * not_dones[:,None] + td_errors[:,None]
             trajectory[i] = (states, actions, log_probs, R, advantages)
 
         states, actions, old_log_probs, returns, advantages, = map(
             lambda x: torch.cat(x, dim=0), zip(*trajectory)
         )
         print('epoch:')
-        for i in range(self.epochs):
+        for i in range(config.epochs):
             print(i, end=' ', flush=True)
 
             for states_b, actions_b, old_log_probs_b, returns_b, advantages_b in \
@@ -104,18 +90,18 @@ class PPOAgent():
 
                 ratio = (new_log_probs_b - old_log_probs_b).exp()
 
-                clip = torch.clamp(ratio, 1-self.ppo_ratio_clip, 1+self.ppo_ratio_clip)
+                clip = torch.clamp(ratio, 1-config.ppo_ratio_clip, 1+config.ppo_ratio_clip)
                 clipped_surrogate = torch.min(ratio*advantages_b.unsqueeze(1), clip*advantages_b.unsqueeze(1))
 
-                policy_loss = -torch.mean(clipped_surrogate) - self.entropy_weight * entropy_b.mean()
+                policy_loss = -torch.mean(clipped_surrogate) - config.beta * entropy_b.mean()
                 value_loss = F.smooth_l1_loss(values_b, returns_b.unsqueeze(1))
                 # print(policy_loss.shape, value_loss.shape)
                 self.model.optimizer.zero_grad()
                 (policy_loss + value_loss).backward()
-                nn.utils.clip_grad_norm_(self.model.parameters(), self.gradient_clip)
+                nn.utils.clip_grad_norm_(self.model.parameters(), config.gradient_clip)
                 self.model.optimizer.step()
 
-        steps = self.rollout_len * self.num_agents
+        steps = config.rollout_len * self.num_agents
         self.total_steps += steps
         print('\n')
 
@@ -159,10 +145,11 @@ class PPOAgent():
         return env_info.vector_observations
 
     def get_batch(self, states, actions, old_log_probs, returns, advs):
+        config = self.config
         length = states.shape[0] # nsteps * num_agents
-        batch_size = int(length / self.mini_batch_size)
+        batch_size = int(length / config.mini_batch_size)
         idx = np.random.permutation(length)
-        for i in range(self.mini_batch_size):
+        for i in range(config.mini_batch_size):
             rge = idx[i*batch_size:(i+1)*batch_size]
             yield (
                 states[rge], actions[rge], old_log_probs[rge], returns[rge], advs[rge].squeeze(1)
