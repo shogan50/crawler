@@ -28,13 +28,13 @@ class Plot_Scores:
         plt.ylabel = 'Mean score'
 
 
-    def plot(self, scores_hist):
-
+    def plot(self, scores_hist,text):
         if len(scores_hist) > 2:
             self.line.set_xdata(np.arange(0, len(scores_hist)))
             self.line.set_ydata(scores_hist)
             self.axes.set_xlim(max(0, len(scores_hist) - 2000), len(scores_hist))
             self.axes.set_ylim(np.min(scores_hist) * 1.05, np.max(scores_hist) * 1.05)
+            self.axes.text(0.5,1,'text')
             plt.draw()
             plt.pause(.1)
 

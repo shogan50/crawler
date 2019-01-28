@@ -8,7 +8,8 @@ class ConfigPPO():
         self.mini_batch_size = 10
         self.lr = 1e-3
         self.tau = .9
-
+        self.fc1_units = 512
+        self.fc2_units = 256
 
 class ConfigDDPG:
     def __init__(self,device):
