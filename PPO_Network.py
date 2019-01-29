@@ -58,8 +58,7 @@ class ActorCritic(nn.Module):
         v = self.critic(x)
         dist = torch.distributions.Normal(mean, std)
         if action is None:
-            action = dist.sample()
-
+            action = torch.clamp(dist.sample(),-1.0,1.0)
         log_prob = dist.log_prob(action)
 
         return action, log_prob, dist.entropy(), v

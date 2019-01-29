@@ -133,13 +133,21 @@ class PPOAgent():
         return x
 
     def env_step(self,action):
+        self.print_nan(action)
+        assert not np.isnan(np.sum(action)), 'nan encountered'
+        assert np.max(action)<= 1.0, 'suspect encountered'
         env_info = self.env.step(action)[self.brain_name]  # get return from environment
         next_states = env_info.vector_observations  # get next state (for each agent)
         rewards = env_info.rewards
+        self.print_nan(rewards)
+        assert not np.isnan(np.sum(rewards)), 'nan encountered'
+        assert  np.min(rewards)>-20,'suspect encountered'
         dones = env_info.local_done
         for i in range(len(dones)):
             dones[i]= int(dones[i])
-
+        if(np.isnan(np.sum(next_states))):
+            print(next_states)
+        assert not np.isnan(np.sum(next_states)), 'nan encountered'
         return next_states,rewards, self.tensor(dones)
 
     def env_reset(self):
@@ -156,3 +164,6 @@ class PPOAgent():
             yield (
                 states[rge], actions[rge], old_log_probs[rge], returns[rge], advs[rge].squeeze(1)
                 )
+    def print_nan(self, val):
+        if np.isnan(np.sum(val)):
+            print(val)
