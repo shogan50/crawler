@@ -138,7 +138,7 @@ class PPOAgent():
         assert np.max(action)<= 1.0, 'suspect encountered'
         env_info = self.env.step(action)[self.brain_name]  # get return from environment
         next_states = env_info.vector_observations  # get next state (for each agent)
-        rewards = env_info.rewards
+        rewards = np.nan_to_num(env_info.rewards)           #Getting spurious nan's.  have verified that actions are not nan's
         self.print_nan(rewards)
         assert not np.isnan(np.sum(rewards)), 'nan encountered'
         assert  np.min(rewards)>-20,'suspect encountered'
