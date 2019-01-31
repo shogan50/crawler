@@ -82,6 +82,7 @@ class PPOAgent():
             lambda x: torch.cat(x, dim=0), zip(*trajectory)
         )
         print('epoch:')
+        epoch_entropy = []
         for i in range(config.epochs):
             print(i, end=' ', flush=True)
 
@@ -96,6 +97,7 @@ class PPOAgent():
                 clipped_surrogate = torch.min(ratio*advantages_b.unsqueeze(1), clip*advantages_b.unsqueeze(1))
 
                 policy_loss = -torch.mean(clipped_surrogate) - config.beta * entropy_b.mean()
+                epoch_entropy.append(entropy_b.mean().detach().cpu().numpy())
                 value_loss = F.smooth_l1_loss(values_b, returns_b.unsqueeze(1))
                 # print(policy_loss.shape, value_loss.shape)
                 self.model.optimizer.zero_grad()
@@ -106,16 +108,17 @@ class PPOAgent():
         steps = config.rollout_len * self.num_agents
         self.total_steps += steps
         print('\n')
-
+        print('epoch_entropy', np.mean(epoch_entropy))
         temp = self.episode_rewards[-100:]
         temp = np.nan_to_num(temp)
         temp = np.mean(temp)
         self.step_rewards.append(temp)
-
-        x = np.arange(0,len(self.episode_rewards[-10:]))
-        y = np.nan_to_num(self.episode_rewards[-10:])          #getting occasional NAN.  Not sure why.
-        z = np.polyfit(x,y,1)                                   # outputs [a, b] as in ax+b I think
-        slope = z[0]
+        slope = 0
+        if len(self.step_rewards)>10:
+            x = np.arange(0,len(self.step_rewards[-10:]))
+            y = np.nan_to_num(self.step_rewards[-10:])
+            z = np.polyfit(x,y,1)                            # outputs [a, b] as in ax+b I think
+            slope = z[0]
 
         print('step:{}  act:{:.2f} mean:{:.2f} slope:{:.2f} std:{:.2f}'\
               .format(self.steps,
@@ -133,20 +136,20 @@ class PPOAgent():
         return x
 
     def env_step(self,action):
-        self.print_nan(action)
+        self.print_nan('action', action)
         assert not np.isnan(np.sum(action)), 'nan encountered'
-        assert np.max(action)<= 1.0, 'suspect encountered'
+        # assert np.max(action)<= 1.0, 'suspect encountered'
         env_info = self.env.step(action)[self.brain_name]  # get return from environment
         next_states = env_info.vector_observations  # get next state (for each agent)
-        rewards = np.nan_to_num(env_info.rewards)           #Getting spurious nan's.  have verified that actions are not nan's
-        self.print_nan(rewards)
+        rewards = env_info.rewards
+        self.print_nan('rewards nan ************************************************************************', rewards)       #Getting spurious nan's.  have verified that actions are not nan's
+        rewards = np.nan_to_num(rewards)
         assert not np.isnan(np.sum(rewards)), 'nan encountered'
-        assert  np.min(rewards)>-20,'suspect encountered'
+        # assert  np.min(rewards)>-20,'suspect encountered'
         dones = env_info.local_done
         for i in range(len(dones)):
             dones[i]= int(dones[i])
-        if(np.isnan(np.sum(next_states))):
-            print(next_states)
+        self.print_nan('next_states',next_states)
         assert not np.isnan(np.sum(next_states)), 'nan encountered'
         return next_states,rewards, self.tensor(dones)
 
@@ -158,12 +161,13 @@ class PPOAgent():
         config = self.config
         length = states.shape[0] # nsteps * num_agents
         batch_size = int(length / config.mini_batch_size)
+        print('l, bs', length,batch_size)
         idx = np.random.permutation(length)
         for i in range(config.mini_batch_size):
             rge = idx[i*batch_size:(i+1)*batch_size]
             yield (
                 states[rge], actions[rge], old_log_probs[rge], returns[rge], advs[rge].squeeze(1)
                 )
-    def print_nan(self, val):
+    def print_nan(self,txt, val):
         if np.isnan(np.sum(val)):
-            print(val)
+            print(txt, val)

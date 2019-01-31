@@ -54,11 +54,11 @@ class ActorCritic(nn.Module):
         # x = self.bn2(x)
         x = F.relu(x)
         mean = F.tanh(self.actor_mean(x))
-        std = F.softplus(self.logit_std)
+        std = F.softplus(self.logit_std) + 1e-5
         v = self.critic(x)
         dist = torch.distributions.Normal(mean, std)
         if action is None:
-            action = torch.clamp(dist.sample(),-1.0,1.0)
+            action = dist.sample()
         log_prob = dist.log_prob(action)
 
         return action, log_prob, dist.entropy(), v
