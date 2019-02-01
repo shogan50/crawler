@@ -141,6 +141,8 @@ class PPOAgent():
         # assert np.max(action)<= 1.0, 'suspect encountered'
         env_info = self.env.step(action)[self.brain_name]  # get return from environment
         next_states = env_info.vector_observations  # get next state (for each agent)
+        next_states = np.nan_to_num(next_states)
+        self.print_nan('next_states nan ********************************************************************',next_states)
         rewards = env_info.rewards
         self.print_nan('rewards nan ************************************************************************', rewards)       #Getting spurious nan's.  have verified that actions are not nan's
         rewards = np.nan_to_num(rewards)
@@ -160,11 +162,21 @@ class PPOAgent():
     def get_batch(self, states, actions, old_log_probs, returns, advs):
         config = self.config
         length = states.shape[0] # nsteps * num_agents
-        batch_size = int(length / config.mini_batch_size)
-        print('l, bs', length,batch_size)
+        # batch_size = int(length / config.mini_batch_size)
+        batch_size = int(self.num_agents*config.mini_batch_size)
+        num_batches = length//batch_size # numb batches to get to an epoch
+
+        # print('l, bs', length,batch_size, states.shape)
         idx = np.random.permutation(length)
-        for i in range(config.mini_batch_size):
-            rge = idx[i*batch_size:(i+1)*batch_size]
+        for i in range(num_batches):
+            start = (i*batch_size) % (length-1)
+            stop =(i+1)*batch_size % (length-1)
+            if start < stop:
+                rge = idx[start:stop]
+            else:
+                rge = np.append(idx[start:-1], idx[0:stop])
+            # print(states.shape, actions.shape)
+            # print('states 1,2', states[1,2])
             yield (
                 states[rge], actions[rge], old_log_probs[rge], returns[rge], advs[rge].squeeze(1)
                 )
