@@ -7,6 +7,7 @@ from utils import *
 from PPO_agent import PPOAgent
 from PPO_Network import ActorCritic
 from unityagents import UnityEnvironment
+import torch
 
 cwd = os.getcwd()           # Current Working Directory
 if os.name == 'nt':         # 'nt' is what my laptop reports
@@ -33,10 +34,12 @@ plot = Plot_Scores(fn='PPO_trial_', text=config.__dict__)
 model = ActorCritic(n_inputs, n_actions,config).to(config.device)
 agent = PPOAgent(model=model, env=env, env_info=env_info, brain=brain_name,num_agents=num_agents, config=config)
 print(model)
-
+last_score = 0
 finished_episodes = 0
 for step in range(config.max_steps):
     scores_hist = agent.step()
+    if scores_hist[-1] > last_score:
+        torch.save(model.parameters(),'crawler.pth')
     plot.plot(scores_hist)
 
 
