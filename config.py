@@ -2,12 +2,12 @@ import torch
 class ConfigPPO():
     def __init__(self):
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        self.epochs = 2                 # Now represents number of times through the rollout batch
+        self.epochs = 1                 # Now represents number of times through the rollout batch
         self.gamma = .99
         self.gradient_clip = .2
         self.max_steps = int(2000)
         self.mini_batch_size = 16
-        self.lr = 2e-4
+        self.lr = 1e-3
         self.lr_decay = .995
         self.ppo_ratio_clip = .5
         self.beta = .01

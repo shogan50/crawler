@@ -39,7 +39,8 @@ finished_episodes = 0
 for step in range(config.max_steps):
     scores_hist = agent.step()
     if scores_hist[-1] > last_score:
-        torch.save(model.parameters(),'crawler.pth')
+        torch.save(model.state_dict(),'crawler.pth')
+        last_score = scores_hist[-1]
     plot.plot(scores_hist)
 
 
