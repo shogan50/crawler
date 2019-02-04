@@ -12,7 +12,7 @@ class ConfigPPO():
         self.ppo_ratio_clip = .5
         self.beta = .01
         self.rollout_len = 2056
-        self.tau = .95
+        self.tau = .9
         self.fc1_units = 512
         self.fc2_units = 256
         self.use_gae = True
